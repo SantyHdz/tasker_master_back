@@ -10,7 +10,6 @@ load_dotenv(dotenv_path=env_path, override=True)
 
 from dotenv import dotenv_values
 config = dotenv_values(env_path)
-print("Lectura directa del .env:", config)
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 

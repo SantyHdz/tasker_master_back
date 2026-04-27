@@ -3,12 +3,14 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
 from app.schemas.user import UserCreate, UserResponse
-import hashlib
+from app.utils.deps import get_current_user
+from app.utils.security import hash_password
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-def hash_password(password: str):
-    return hashlib.sha256(password.encode()).hexdigest()
+@router.get("/me")
+def get_me(current_user = Depends(get_current_user)):
+    return current_user
 
 @router.post("/", response_model=UserResponse, status_code=201)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
