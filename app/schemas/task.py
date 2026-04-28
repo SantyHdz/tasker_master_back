@@ -1,21 +1,29 @@
 ﻿from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 from uuid import UUID
 
 class TaskCreate(BaseModel):
     title: str
-    description: str | None = None
+    description: Optional[str] = None
     priority_id: int
-    due_date: datetime | None = None
+    due_date: Optional[datetime] = None
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    priority_id: Optional[int] = None
+    due_date: Optional[datetime] = None
+    is_completed: Optional[bool] = None
 
 class TaskResponse(BaseModel):
     id: UUID
     title: str
-    description: str | None
+    description: Optional[str]
     priority_id: int
-    due_date: datetime | None
+    due_date: Optional[datetime]
     is_completed: bool
-    user_id: UUID
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    class Config:
+        from_attributes = True
