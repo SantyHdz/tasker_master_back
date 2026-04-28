@@ -6,7 +6,8 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 env_path = BASE_DIR / ".env"
-load_dotenv(dotenv_path=env_path)
+if os.getenv("ENV") != "production":
+    load_dotenv(dotenv_path=env_path)
 
 from dotenv import dotenv_values
 config = dotenv_values(env_path)
