@@ -1,6 +1,5 @@
 ﻿from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
 from uuid import UUID
 
 from app.database import get_db
@@ -11,41 +10,33 @@ from app.utils.deps import get_current_user
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
-# Crear tarea
 @router.post("/", response_model=TaskResponse)
 def create_task(
     task: TaskCreate,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     db_task = Task(
         title=task.title,
         description=task.description,
         priority_id=task.priority_id,
         due_date=task.due_date,
-        user_id=current_user.id
+        user_id=current_user.id,
     )
-
     db.add(db_task)
     db.commit()
     db.refresh(db_task)
-
     return db_task
 
 
-# Obtener todas tus tareas
 @router.get("/", response_model=list[TaskResponse])
 def get_tasks(
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user),
-
-    # PAGINACIÓN
+    current_user=Depends(get_current_user),
     skip: int = 0,
-    limit: int = 10,
-
-    # FILTROS
+    limit: int = 100,  # fixed: was 10
     is_completed: bool | None = None,
-    priority_id: int | None = None
+    priority_id: int | None = None,
 ):
     query = db.query(Task).filter(Task.user_id == current_user.id)
 
@@ -55,42 +46,33 @@ def get_tasks(
     if priority_id is not None:
         query = query.filter(Task.priority_id == priority_id)
 
-    tasks = query.offset(skip).limit(limit).all()
-
-    return tasks
+    return query.order_by(Task.created_at.desc()).offset(skip).limit(limit).all()
 
 
-# Obtener una tarea por ID
 @router.get("/{task_id}", response_model=TaskResponse)
 def get_task(
     task_id: UUID,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     task = db.query(Task).filter(
-        Task.id == task_id,
-        Task.user_id == current_user.id
+        Task.id == task_id, Task.user_id == current_user.id
     ).first()
-
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-
     return task
 
 
-# Actualizar tarea
 @router.put("/{task_id}", response_model=TaskResponse)
 def update_task(
     task_id: UUID,
     task_update: TaskUpdate,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     task = db.query(Task).filter(
-        Task.id == task_id,
-        Task.user_id == current_user.id
+        Task.id == task_id, Task.user_id == current_user.id
     ).first()
-
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
@@ -99,26 +81,57 @@ def update_task(
 
     db.commit()
     db.refresh(task)
-
     return task
 
 
-# Eliminar tarea
+@router.patch("/{task_id}/toggle", response_model=TaskResponse)
+def toggle_task(
+    task_id: UUID,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Toggle is_completed — used by the frontend checkbox."""
+    task = db.query(Task).filter(
+        Task.id == task_id, Task.user_id == current_user.id
+    ).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    task.is_completed = not task.is_completed
+    db.commit()
+    db.refresh(task)
+    return task
+
+
 @router.delete("/{task_id}")
 def delete_task(
     task_id: UUID,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     task = db.query(Task).filter(
-        Task.id == task_id,
-        Task.user_id == current_user.id
+        Task.id == task_id, Task.user_id == current_user.id
     ).first()
-
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
     db.delete(task)
     db.commit()
-
     return {"message": "Task deleted"}
+
+@router.patch("/{task_id}/toggle", response_model=TaskResponse)
+def toggle_task(
+    task_id: UUID,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    task = db.query(Task).filter(
+        Task.id == task_id, Task.user_id == current_user.id
+    ).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    task.is_completed = not task.is_completed
+    db.commit()
+    db.refresh(task)
+    return task
