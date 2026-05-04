@@ -6,13 +6,14 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 env_path = BASE_DIR / ".env"
+
 if os.getenv("ENV") != "production":
     load_dotenv(dotenv_path=env_path)
 
-from dotenv import dotenv_values
-config = dotenv_values(env_path)
-
 DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is not set")
 
 engine = create_engine(DATABASE_URL)
 
