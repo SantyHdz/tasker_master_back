@@ -2,3 +2,8 @@
 .venv/
 __pycache__/
 *.pyc
+INSTRUCCIONES_N8N.md
+N8N_WORKFLOW_CORRECTED.json
+N8N_WORKFLOW_GUIDE.md
+pytest.ini
+test.db

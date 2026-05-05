@@ -1,6 +1,7 @@
 ﻿from fastapi import Depends, HTTPException
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
+from uuid import UUID
 from app.database import get_db
 from app.models.user import User
 from app.utils.security import SECRET_KEY, ALGORITHM
@@ -23,7 +24,9 @@ def get_current_user(
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    user = db.query(User).filter(User.id == user_id).first()
+    # Convert string to UUID for database query
+    user_uuid = UUID(user_id)
+    user = db.query(User).filter(User.id == user_uuid).first()
 
     if user is None:
         raise HTTPException(status_code=401, detail="User not found")
