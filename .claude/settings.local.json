@@ -3,7 +3,12 @@
     "allow": [
       "Bash(curl *)",
       "Bash(git rm *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "mcp__n8n__tools_documentation",
+      "mcp__n8n__n8n_create_workflow",
+      "mcp__n8n__n8n_deploy_template",
+      "mcp__n8n__search_templates",
+      "mcp__n8n__n8n_list_workflows"
     ]
   }
 }

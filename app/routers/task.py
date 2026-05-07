@@ -1,12 +1,14 @@
 ﻿from fastapi import APIRouter, Depends, HTTPException, Header, Response
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from uuid import UUID
 from datetime import datetime, timedelta
 
 from app.database import get_db
 from app.models.task import Task
+from app.models.user import User
 from app.models.priority import Priority
 from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse
+from app.schemas.notification import PendingNotificationsResponse, UserNotification
 from app.utils.deps import get_current_user
 from app.utils.datetime_utils import ensure_timezone_aware, get_current_utc
 from app.utils.security import verify_n8n_api_key
@@ -445,58 +447,94 @@ def get_pending_notifications(
     x_api_key: str = Header(None, description="API key for n8n authentication")
 ):
     """
-    Get tasks that need notifications for the n8n workflow.
+    Get tasks that need notifications for the n8n workflow, grouped by user and Telegram chat ID.
 
     This endpoint checks for tasks that are due within specific time windows:
     - 24 hours (±1 hour window)
     - 1 hour (±5 minutes window)
     - 10 minutes (±2 minutes window)
 
-    Only returns tasks where the corresponding notification flag is not set.
+    Only returns tasks where the corresponding notification flag is not set and users have telegram_chat_id configured.
 
     - **x_api_key**: API key for authentication (required)
 
-    Returns tasks grouped by notification time window.
+    Returns tasks grouped by user/telegram_chat_id with notification time windows.
     """
     # Verify API key
     if not x_api_key or not verify_n8n_api_key(x_api_key):
         raise HTTPException(status_code=401, detail="Invalid API key")
 
     current_time = get_current_utc()
+    users_data = {}
 
     # Tasks due in 24 hours (±1 hour window) that haven't been notified
-    tasks_24h = db.query(Task).filter(
+    tasks_24h = db.query(Task).join(User).filter(
+        Task.user_id == User.id,
         Task.due_date.isnot(None),
         Task.is_completed == False,
         Task.notified_24h == False,
         Task.due_date >= current_time + timedelta(hours=23),
-        Task.due_date <= current_time + timedelta(hours=25)
+        Task.due_date <= current_time + timedelta(hours=25),
+        User.telegram_chat_id.isnot(None)
     ).all()
 
     # Tasks due in 1 hour (±5 minutes window) that haven't been notified
-    tasks_1h = db.query(Task).filter(
+    tasks_1h = db.query(Task).join(User).filter(
+        Task.user_id == User.id,
         Task.due_date.isnot(None),
         Task.is_completed == False,
         Task.notified_1h == False,
         Task.due_date >= current_time + timedelta(minutes=55),
-        Task.due_date <= current_time + timedelta(minutes=65)
+        Task.due_date <= current_time + timedelta(minutes=65),
+        User.telegram_chat_id.isnot(None)
     ).all()
 
     # Tasks due in 10 minutes (±2 minutes window) that haven't been notified
-    tasks_10m = db.query(Task).filter(
+    tasks_10m = db.query(Task).join(User).filter(
+        Task.user_id == User.id,
         Task.due_date.isnot(None),
         Task.is_completed == False,
         Task.notified_10m == False,
         Task.due_date >= current_time + timedelta(minutes=8),
-        Task.due_date <= current_time + timedelta(minutes=12)
+        Task.due_date <= current_time + timedelta(minutes=12),
+        User.telegram_chat_id.isnot(None)
     ).all()
 
-    return {
-        "24h": [TaskResponse.model_validate(task) for task in tasks_24h],
-        "1h": [TaskResponse.model_validate(task) for task in tasks_1h],
-        "10m": [TaskResponse.model_validate(task) for task in tasks_10m],
-        "current_time": current_time.isoformat()
-    }
+    # Group tasks by user/telegram_chat_id
+    for task in tasks_24h:
+        user_key = f"{task.user_id}:{task.user.telegram_chat_id}"
+        if user_key not in users_data:
+            users_data[user_key] = {
+                "telegram_chat_id": task.user.telegram_chat_id,
+                "user_id": task.user_id,
+                "tasks": {"24h": [], "1h": [], "10m": []}
+            }
+        users_data[user_key]["tasks"]["24h"].append(TaskResponse.model_validate(task))
+
+    for task in tasks_1h:
+        user_key = f"{task.user_id}:{task.user.telegram_chat_id}"
+        if user_key not in users_data:
+            users_data[user_key] = {
+                "telegram_chat_id": task.user.telegram_chat_id,
+                "user_id": task.user_id,
+                "tasks": {"24h": [], "1h": [], "10m": []}
+            }
+        users_data[user_key]["tasks"]["1h"].append(TaskResponse.model_validate(task))
+
+    for task in tasks_10m:
+        user_key = f"{task.user_id}:{task.user.telegram_chat_id}"
+        if user_key not in users_data:
+            users_data[user_key] = {
+                "telegram_chat_id": task.user.telegram_chat_id,
+                "user_id": task.user_id,
+                "tasks": {"24h": [], "1h": [], "10m": []}
+            }
+        users_data[user_key]["tasks"]["10m"].append(TaskResponse.model_validate(task))
+
+    # Convert to list format for response
+    users_list = list(users_data.values())
+
+    return PendingNotificationsResponse(users=users_list, current_time=current_time.isoformat())
 
 
 @router.patch(

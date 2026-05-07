@@ -1,0 +1,693 @@
+{
+  "name": "TaskerMaster - Notificaciones de Tareas",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "priority-label",
+              "name": "priority_label",
+              "value": "🟢 Baja",
+              "type": "string"
+            },
+            {
+              "id": "priority-emoji",
+              "name": "priority_emoji",
+              "value": "🟢",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "dd424acd-94b3-4358-98e7-d48e426f4726",
+      "name": "🟢 Prioridad baja",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "priority-label",
+              "name": "priority_label",
+              "value": "🟡 Media",
+              "type": "string"
+            },
+            {
+              "id": "priority-emoji",
+              "name": "priority_emoji",
+              "value": "🟡",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "52654480-d42c-4c16-90e6-f2165a746923",
+      "name": "🟡 Prioridad media",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "priority-label",
+              "name": "priority_label",
+              "value": "🔴 Alta",
+              "type": "string"
+            },
+            {
+              "id": "priority-emoji",
+              "name": "priority_emoji",
+              "value": "🔴",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "7814ce8e-ae94-45b6-91f8-5145940ed962",
+      "name": "🔴 Prioridad alta",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://tasker-master-backend.onrender.com/tasks/notifications/pending",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "default-n8n-key-change-in-production"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {}
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "cb190c6e-35c0-4f4b-a1bb-919d1ff12e6a",
+      "name": "Obtener tareas pendientes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -960,
+        208
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "id": "6bb3b34c-ffce-472d-8f0e-e64e530ca687",
+      "name": "Cron cada 10 minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1200,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\nif (!data || (!data['24h'] && !data['1h'] && !data['10m'])) {\n  return [{ json: { empty: true, reason: 'API no respondió correctamente o sin datos' } }];\n}\n\nconst tasks24h = (data['24h'] || []).map(task => ({\n  ...task,\n  notification_type: '24h',\n  notification_label: '24 horas'\n}));\n\nconst tasks1h = (data['1h'] || []).map(task => ({\n  ...task,\n  notification_type: '1h',\n  notification_label: '1 hora'\n}));\n\nconst tasks10m = (data['10m'] || []).map(task => ({\n  ...task,\n  notification_type: '10m',\n  notification_label: '10 minutos'\n}));\n\nconst allTasks = [...tasks24h, ...tasks1h, ...tasks10m];\n\nif (allTasks.length === 0) {\n  return [{ json: { empty: true, reason: 'No hay tareas próximas a vencer' } }];\n}\n\nreturn allTasks.map(task => ({ json: task }));"
+      },
+      "id": "be82cc20-1128-4ee7-9610-54fbb852e4c3",
+      "name": "Separar y validar tareas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "check-empty",
+              "leftValue": "={{ $json.empty }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f99ded2a-29d6-4341-be0f-0f4aefe6cdab",
+      "name": "¿Sin tareas?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "status",
+              "name": "status",
+              "value": "idle",
+              "type": "string"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "={{ $json.reason || 'Sin tareas que notificar' }}",
+              "type": "string"
+            },
+            {
+              "id": "timestamp",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4a25d949-3e6d-4a27-8447-aa2c6f8a7585",
+      "name": "Sin tareas — FIN",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -480,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.priority_id }}",
+                    "rightValue": 1,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    },
+                    "id": "9f4d67d3-a956-4ecf-bdd2-9ed49cf32a77"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "baja"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.priority_id }}",
+                    "rightValue": 2,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    },
+                    "id": "4843f67f-1b98-4555-8534-441110ce976c"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "media"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.priority_id }}",
+                    "rightValue": 3,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    },
+                    "id": "ad3ab8f4-5035-48f0-b553-61921ec47617"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "alta"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "694e1640-a36d-495e-8c71-ea53633f4ef0",
+      "name": "Prioridad → Rama",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -240,
+        208
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "ee34b81a-1640-47f4-80b0-c6e49a13eba5",
+      "name": "Unir prioridades",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        240,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const task = $input.first().json;\n\nconst task_id = task.id;\nconst notification_type = task.notification_type;\n\nconst dueDate = new Date(task.due_date);\nconst formattedDate = dueDate.toLocaleString('es-CO', {\n  timeZone: 'America/Bogota',\n  weekday: 'long',\n  year: 'numeric',\n  month: 'long',\n  day: 'numeric',\n  hour: '2-digit',\n  minute: '2-digit'\n});\n\nconst now = new Date();\nconst diffMs = dueDate.getTime() - now.getTime();\nconst diffHours = Math.floor(diffMs / (1000 * 60 * 60));\nconst diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));\n\nlet timeRemaining = '';\nif (diffHours > 0) {\n  timeRemaining = `${diffHours}h ${diffMinutes}m`;\n} else if (diffMinutes > 0) {\n  timeRemaining = `${diffMinutes} minutos`;\n} else {\n  timeRemaining = 'menos de 1 minuto';\n}\n\nconst alertEmojis = { '24h': '📅', '1h': '⚠️', '10m': '🚨' };\nconst alertTitles = {\n  '24h': 'Recordatorio — 24 horas',\n  '1h': '¡Atención\\! — 1 hora restante',\n  '10m': '¡URGENTE\\! — 10 minutos'\n};\n\nconst alertEmoji = alertEmojis[task.notification_type] || '📋';\nconst alertTitle = alertTitles[task.notification_type] || 'Recordatorio';\n\nconst escapeMarkdown = (text) => {\n  if (!text) return '';\n  return String(text).replace(/[_*[\\]()~`>#+\\-=|{}.!]/g, '\\\\$&');\n};\n\nconst titleLine = `${alertEmoji} *${alertTitle}*`;\nconst taskLine = `📌 *Tarea:* ${escapeMarkdown(task.title)}`;\nconst descLine = task.description ? `📝 *Descripción:* ${escapeMarkdown(task.description)}` : null;\nconst priorityLine = `${task.priority_emoji} *Prioridad:* ${escapeMarkdown(task.priority_label)}`;\nconst dateLine = `🕒 *Vence:* ${escapeMarkdown(formattedDate)}`;\nconst timeLine = `⏳ *Tiempo restante:* ${escapeMarkdown(timeRemaining)}`;\nconst footerLine = `_TaskerMaster — Tu asistente de tareas_`;\n\nconst lines = [titleLine, '', taskLine];\nif (descLine) lines.push(descLine);\nlines.push(priorityLine, dateLine, timeLine, '', footerLine);\n\nconst message = lines.join('\\n');\n\nreturn [{\n  json: {\n    ...task,\n    task_id,\n    notification_type,\n    telegram_message: message,\n    formatted_due_date: formattedDate,\n    time_remaining: timeRemaining\n  }\n}];"
+      },
+      "id": "0274724e-48b1-4efd-9fa4-541bcd70fefa",
+      "name": "Formatear mensaje Telegram",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "5550201252",
+        "text": "={{ $json.telegram_message }}",
+        "additionalFields": {
+          "disable_web_page_preview": true,
+          "parse_mode": "MarkdownV2"
+        }
+      },
+      "id": "85fffeb2-6158-4dfe-a719-3a3116025533",
+      "name": "Enviar Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        208
+      ],
+      "webhookId": "cd93ae7e-3f17-41d2-b96d-0868900045c2",
+      "credentials": {
+        "telegramApi": {
+          "id": "cP91mmGCIWqcJz0m",
+          "name": "Telegram account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Formatear mensaje Telegram').first().json;\n\nreturn [{\n  json: {\n    task_id: prev.task_id || prev.id,\n    notification_type: prev.notification_type,\n    title: prev.title,\n    telegram_ok: true\n  }\n}];"
+      },
+      "id": "f2dbd80b-2388-46b6-9c10-4dc8fb8c4fd0",
+      "name": "Preservar IDs tras Telegram",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://tasker-master-backend.onrender.com/tasks/{{ $json.task_id }}/notifications/{{ $json.notification_type }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "default-n8n-key-change-in-production"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "a45b477f-7082-4b05-b166-46a4188689f8",
+      "name": "Marcar notificada en backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        208
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "status",
+              "name": "status",
+              "value": "success",
+              "type": "string"
+            },
+            {
+              "id": "task-id",
+              "name": "task_id",
+              "value": "={{ $json.task_id }}",
+              "type": "string"
+            },
+            {
+              "id": "notif-type",
+              "name": "notification_type",
+              "value": "={{ $json.notification_type }}",
+              "type": "string"
+            },
+            {
+              "id": "task-title",
+              "name": "task_title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "sent-at",
+              "name": "sent_at",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "Notificación enviada y marcada correctamente",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "067722ed-9a24-44eb-b57a-8e32fb891c8b",
+      "name": "Log — Éxito",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1440,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE tasks SET\n  notified_24h = CASE WHEN $1 = '24h' THEN true ELSE notified_24h END,\n  notified_1h  = CASE WHEN $1 = '1h'  THEN true ELSE notified_1h  END,\n  notified_10m = CASE WHEN $1 = '10m' THEN true ELSE notified_10m END\nWHERE id = $2::uuid\nRETURNING id, notified_24h, notified_1h, notified_10m;",
+        "options": {}
+      },
+      "id": "538c8e0d-4e26-4a6e-aea3-49e8b4b0545b",
+      "name": "Fallback — Update directo Supabase",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1440,
+        384
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "eqdsA2sB9MDyInkJ",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "🟢 Prioridad baja": {
+      "main": [
+        [
+          {
+            "node": "Unir prioridades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🟡 Prioridad media": {
+      "main": [
+        [
+          {
+            "node": "Unir prioridades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔴 Prioridad alta": {
+      "main": [
+        [
+          {
+            "node": "Unir prioridades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener tareas pendientes": {
+      "main": [
+        [
+          {
+            "node": "Separar y validar tareas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cron cada 10 minutos": {
+      "main": [
+        [
+          {
+            "node": "Obtener tareas pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar y validar tareas": {
+      "main": [
+        [
+          {
+            "node": "¿Sin tareas?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Sin tareas?": {
+      "main": [
+        [
+          {
+            "node": "Sin tareas — FIN",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prioridad → Rama",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prioridad → Rama": {
+      "main": [
+        [
+          {
+            "node": "🟢 Prioridad baja",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🟡 Prioridad media",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔴 Prioridad alta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unir prioridades": {
+      "main": [
+        [
+          {
+            "node": "Formatear mensaje Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatear mensaje Telegram": {
+      "main": [
+        [
+          {
+            "node": "Enviar Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Telegram": {
+      "main": [
+        [
+          {
+            "node": "Preservar IDs tras Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preservar IDs tras Telegram": {
+      "main": [
+        [
+          {
+            "node": "Marcar notificada en backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar notificada en backend": {
+      "main": [
+        [
+          {
+            "node": "Log — Éxito",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fallback — Update directo Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fallback — Update directo Supabase": {
+      "main": [
+        [
+          {
+            "node": "Log — Éxito",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "0af492a5-f75d-4277-9c1f-c191b71d2d34",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "75a43b0fe8e9b3a47fa1ab10c9be25bc43ce8276e0dabf6de3f4475586aa6542"
+  },
+  "id": "xrXadokG13wuowaE",
+  "tags": [
+    {
+      "name": "taskermaster",
+      "id": "MEHQQw6caoLt1xT4",
+      "updatedAt": "2026-05-07T01:53:15.094Z",
+      "createdAt": "2026-05-07T01:53:15.094Z"
+    },
+    {
+      "name": "produccion",
+      "id": "ptsTHtJCStn0g7rP",
+      "updatedAt": "2026-05-07T01:53:15.137Z",
+      "createdAt": "2026-05-07T01:53:15.137Z"
+    }
+  ]
+}

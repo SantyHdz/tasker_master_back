@@ -22,6 +22,7 @@ class UserResponse(BaseModel):
     id: UUID
     email: EmailStr
     name: Optional[str]
+    telegram_chat_id: Optional[str] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -30,3 +31,13 @@ class UserResponse(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+
+class UserUpdate(BaseModel):
+    telegram_chat_id: Optional[str] = None
+    model_config = {"from_attributes": True}
+
+
+class TelegramLinkRequest(BaseModel):
+    telegram_chat_id: str
+    telegram_username: str
