@@ -468,7 +468,7 @@ def get_pending_notifications(
     users_data = {}
 
     # Tasks due in 24 hours (±1 hour window) that haven't been notified
-    tasks_24h = db.query(Task).join(User).filter(
+    tasks_24h = db.query(Task).options(joinedload(Task.user)).join(User).filter(
         Task.user_id == User.id,
         Task.due_date.isnot(None),
         Task.is_completed == False,
@@ -479,7 +479,7 @@ def get_pending_notifications(
     ).all()
 
     # Tasks due in 1 hour (±5 minutes window) that haven't been notified
-    tasks_1h = db.query(Task).join(User).filter(
+    tasks_1h = db.query(Task).options(joinedload(Task.user)).join(User).filter(
         Task.user_id == User.id,
         Task.due_date.isnot(None),
         Task.is_completed == False,
@@ -490,7 +490,7 @@ def get_pending_notifications(
     ).all()
 
     # Tasks due in 10 minutes (±2 minutes window) that haven't been notified
-    tasks_10m = db.query(Task).join(User).filter(
+    tasks_10m = db.query(Task).options(joinedload(Task.user)).join(User).filter(
         Task.user_id == User.id,
         Task.due_date.isnot(None),
         Task.is_completed == False,

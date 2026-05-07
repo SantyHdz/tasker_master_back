@@ -1,5 +1,6 @@
 ﻿from sqlalchemy import Column, String, TIMESTAMP
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 import uuid
 from app.database import Base
 from sqlalchemy.sql import func
@@ -15,6 +16,9 @@ class User(Base):
     name = Column(String(255), nullable=True)
     telegram_chat_id = Column(String(100), nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+
+    # Relación con Task
+    tasks = relationship("Task", back_populates="user")
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}', telegram_chat_id={self.telegram_chat_id})>"

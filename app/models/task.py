@@ -1,5 +1,6 @@
 ﻿from sqlalchemy import Column, String, Boolean, TIMESTAMP, ForeignKey, SmallInteger
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 import uuid
 from sqlalchemy.sql import func
 from app.database import Base
@@ -21,6 +22,9 @@ class Task(Base):
     notified_24h = Column(Boolean, default=False, nullable=False, server_default="false")
     notified_1h = Column(Boolean, default=False, nullable=False, server_default="false")
     notified_10m = Column(Boolean, default=False, nullable=False, server_default="false")
+
+    # Relación con User
+    user = relationship("User", back_populates="tasks")
 
     def __repr__(self):
         return f"<Task(id={self.id}, title='{self.title}', due_date={self.due_date})>"
